@@ -4,7 +4,7 @@ const configTrain = {
   errorThresh: 0.005, // the acceptable error percentage from training data --> number between 0 and 1
   log: true, // true to use console.log, when a function is supplied it is used --> Either true or a function
   logPeriod: 10, // iterations between logging out --> number greater than 0
-  learningRate: 0.3, // scales with delta to effect training rate --> number between 0 and 1
+  learningRate: 0.99, // scales with delta to effect training rate --> number between 0 and 1
   momentum: 0.1, // scales with next layer's change value --> number between 0 and 1
   callback: null, // a periodic call back that can be triggered while training --> null or function
   callbackPeriod: 10, // the number of iterations through the training data between callback calls --> number greater than 0
@@ -12,12 +12,10 @@ const configTrain = {
 };
 
 const config = {
-  inputSize: 2,
-  inputRange: 2,
-  hiddenLayers: [20, 20],
-  outputSize: 1,
-  learningRate: 0.01,
-  decayRate: 0.999,
+  binaryThresh: 0.05,
+  hiddenLayers: [20], // array of ints for the sizes of the hidden layers in the network
+  activation: 'sigmoid', // supported activation types: ['sigmoid', 'relu', 'leaky-relu', 'tanh'],
+  leakyReluAlpha: 0.01, // supported for activation type 'leaky-relu'
 };
 
 class MyBrain {
@@ -26,45 +24,50 @@ class MyBrain {
   pontuacaoMax = 0
 
   constructor() {
-    this.network = new brain.recurrent.RNN(config);
-    this.network.fromJSON(MODEL)
-    //this.network.train(TRAIN, configTrain)
+    console.log(TRAIN)
+    this.network = new brain.NeuralNetwork(config);
+    this.network.train(TRAIN, configTrain)
+    //this.network.fromJSON(MODEL)
     //const json = this.network.toJSON();
     //console.log(JSON.stringify(json))
   }
 
   predict(x_player, x_point) {
-    return this.network.run([x_player, x_point])
+    console.log({ x_player, x_point })
+    return this.network.run({ x_player, x_point })
   }
 
-  train(x_player, x_point, direction) {
-    this.currentTrain.push({ input: [x_player, x_point], output: [direction] })
+  train(x_player, x_point, status) {
+    const data = {
+      input: { x_player, x_point },
+      output: { [status]: 1 }
+    }
+    this.currentTrain.push(data)
     document.getElementById('train').innerHTML = JSON.stringify(ia.currentTrain)
   }
 
   nextGeneration(pontuacao) {
     if (pontuacao > this.pontuacaoMax) {
-      const net = new brain.recurrent.RNN(config);
+      const net = new brain.NeuralNetwork(config);
       net.fromJSON(this.network.toJSON())
       this.network = net
       this.pontuacaoMax = pontuacao
     } else {
-      console.log(this.network)
+
     }
   }
 
-  play(player, point) {
-    console.log(player.x, point.x)
-    const predict = parseInt(this.predict(player.x, point.x))
+  play(player, point, move = true) {
+    const predict = this.predict(player.x, point.x)
+    const { stopped, left, right } = predict
     console.log(predict)
-    if (predict == 0) { // LEFT
-      if (player.x > 0)
-        player.x -= SPEED
-      lastKey = 0
-    } else if (predict == 1) { // RIGHT 
-      if (player.x + player.width < 500)
-        player.x += SPEED
-      lastKey = 1
+    if (!move) return
+    if ((left > right && left > stopped) && (player.x > 0)) { // LEFT
+      player.x -= SPEED
+    } else if ((right > left && right > stopped) && player.x + player.width < 500) { // RIGHT 
+      player.x += SPEED
+    } else {
+
     }
   }
 }

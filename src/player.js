@@ -13,7 +13,5 @@ class Player {
   }
 
   reset() {
-    this.x = (500 / 2) - this.width / 2
-    this.y = 500 - this.height - 5
   }
 }
